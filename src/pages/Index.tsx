@@ -1,10 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
-import Trade from "./Trade";
-import TradeHistory from "./TradeHistory";
-import WalletPage from "./WalletPage";
-import ReferralPage from "./ReferralPage";
-import ProfilePage from "./ProfilePage";
-import NotificationsPage from "./NotificationsPage";
+import { useState, useEffect, useCallback, lazy, Suspense } from "react";
 import Auth from "./Auth";
 import CustomCursor from "@/components/CustomCursor";
 import BackgroundMusic from "@/components/BackgroundMusic";
@@ -17,6 +11,14 @@ import useTelegramAuth from "@/hooks/useTelegramAuth";
 import { useTelegram } from "@/components/TelegramWebAppProvider";
 import { supabase } from "@/integrations/supabase/client";
 import { initializeGlobalTrades } from "@/hooks/useGlobalTrades";
+
+// Lazy load heavy components for better performance
+const Trade = lazy(() => import("./Trade"));
+const TradeHistory = lazy(() => import("./TradeHistory"));
+const WalletPage = lazy(() => import("./WalletPage"));
+const ReferralPage = lazy(() => import("./ReferralPage"));
+const ProfilePage = lazy(() => import("./ProfilePage"));
+const NotificationsPage = lazy(() => import("./NotificationsPage"));
 
 type Tab = "trade" | "wallet" | "referral" | "profile";
 type View = "main" | "history" | "notifications";
@@ -439,18 +441,24 @@ const Index = () => {
     return (
       <div className="custom-cursor">
         <CustomCursor />
-        <NotificationsPage
-          balance={profile.balance}
-          userName={profile.name}
-          notifications={notifications}
-          onBack={() => setCurrentView("main")}
-          onMarkAsRead={handleMarkAsRead}
-          onMarkAllAsRead={handleMarkAllAsRead}
-          onNavigate={(tab) => {
-            setActiveTab(tab);
-            setCurrentView("main");
-          }}
-        />
+        <Suspense fallback={
+          <div className="min-h-screen bg-background flex items-center justify-center">
+            <div className="w-8 h-8 border-4 border-primary/30 border-t-primary rounded-full animate-spin" />
+          </div>
+        }>
+          <NotificationsPage
+            balance={profile.balance}
+            userName={profile.name}
+            notifications={notifications}
+            onBack={() => setCurrentView("main")}
+            onMarkAsRead={handleMarkAsRead}
+            onMarkAllAsRead={handleMarkAllAsRead}
+            onNavigate={(tab) => {
+              setActiveTab(tab);
+              setCurrentView("main");
+            }}
+          />
+        </Suspense>
       </div>
     );
   }
@@ -460,14 +468,20 @@ const Index = () => {
     return (
       <div className="custom-cursor">
         <CustomCursor />
-        <TradeHistory
-          balance={profile.balance}
-          userName={profile.name}
-          trades={trades}
-          stats={getStats()}
-          onBack={() => setCurrentView("main")}
-          onNavigate={setActiveTab}
-        />
+        <Suspense fallback={
+          <div className="min-h-screen bg-background flex items-center justify-center">
+            <div className="w-8 h-8 border-4 border-primary/30 border-t-primary rounded-full animate-spin" />
+          </div>
+        }>
+          <TradeHistory
+            balance={profile.balance}
+            userName={profile.name}
+            trades={trades}
+            stats={getStats()}
+            onBack={() => setCurrentView("main")}
+            onNavigate={setActiveTab}
+          />
+        </Suspense>
       </div>
     );
   }
@@ -476,49 +490,55 @@ const Index = () => {
     <div className="custom-cursor">
       <CustomCursor />
       <BackgroundMusic autoPlay />
-      {activeTab === "trade" && (
-        <Trade
-          balance={profile.balance}
-          userName={profile.name}
-          userId={user.id}
-          onBalanceChange={handleBalanceChange}
-          onBet={handleBet}
-          onNavigate={setActiveTab}
-          onOpenHistory={() => setCurrentView("history")}
-          onOpenNotifications={() => setCurrentView("notifications")}
-          unreadNotifications={unreadCount}
-          onTradeComplete={handleTradeComplete}
-          refreshProfile={refreshProfile}
-        />
-      )}
-      {activeTab === "wallet" && (
-        <WalletPage
-          balance={profile.balance}
-          totalDeposit={profile.total_deposit}
-          totalBet={profile.total_bet}
-          userName={profile.name}
-          onNavigate={setActiveTab}
-        />
-      )}
-      {activeTab === "referral" && (
-        <ReferralPage
-          balance={profile.balance}
-          userName={profile.name}
-          onNavigate={setActiveTab}
-        />
-      )}
-      {activeTab === "profile" && (
-        <ProfilePage
-          balance={profile.balance}
-          userName={profile.name}
-          userAvatar={profile.avatar_url}
-          totalDeposit={profile.total_deposit}
-          totalBet={profile.total_bet}
-          trades={trades}
-          onLogout={handleLogout}
-          onNavigate={setActiveTab}
-        />
-      )}
+      <Suspense fallback={
+        <div className="min-h-screen bg-background flex items-center justify-center">
+          <div className="w-8 h-8 border-4 border-primary/30 border-t-primary rounded-full animate-spin" />
+        </div>
+      }>
+        {activeTab === "trade" && (
+          <Trade
+            balance={profile.balance}
+            userName={profile.name}
+            userId={user.id}
+            onBalanceChange={handleBalanceChange}
+            onBet={handleBet}
+            onNavigate={setActiveTab}
+            onOpenHistory={() => setCurrentView("history")}
+            onOpenNotifications={() => setCurrentView("notifications")}
+            unreadNotifications={unreadCount}
+            onTradeComplete={handleTradeComplete}
+            refreshProfile={refreshProfile}
+          />
+        )}
+        {activeTab === "wallet" && (
+          <WalletPage
+            balance={profile.balance}
+            totalDeposit={profile.total_deposit}
+            totalBet={profile.total_bet}
+            userName={profile.name}
+            onNavigate={setActiveTab}
+          />
+        )}
+        {activeTab === "referral" && (
+          <ReferralPage
+            balance={profile.balance}
+            userName={profile.name}
+            onNavigate={setActiveTab}
+          />
+        )}
+        {activeTab === "profile" && (
+          <ProfilePage
+            balance={profile.balance}
+            userName={profile.name}
+            userAvatar={profile.avatar_url}
+            totalDeposit={profile.total_deposit}
+            totalBet={profile.total_bet}
+            trades={trades}
+            onLogout={handleLogout}
+            onNavigate={setActiveTab}
+          />
+        )}
+      </Suspense>
     </div>
   );
 };

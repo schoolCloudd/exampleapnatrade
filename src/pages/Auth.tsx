@@ -39,6 +39,14 @@ const Auth = ({ onAuth, onSignUp, onSignIn, needsProfile }: AuthProps) => {
     setMode(needsProfile ? "name" : "signup");
   }, [needsProfile]);
 
+  // Load referral code from localStorage
+  useEffect(() => {
+    const storedReferral = localStorage.getItem('referred_by');
+    if (storedReferral && storedReferral !== 'null' && storedReferral !== 'undefined') {
+      setReferralCode(storedReferral);
+    }
+  }, []);
+
   // Remove the redirect logic that was causing loops
   // Profile creation is handled by the parent component
 
@@ -126,7 +134,25 @@ const Auth = ({ onAuth, onSignUp, onSignIn, needsProfile }: AuthProps) => {
                   </div>
                 </div>
 
-
+                <div className="space-y-2">
+                  <label className="text-sm text-muted-foreground">Referral Code (Optional)</label>
+                  <div className="relative">
+                    <Ticket
+                      size={20}
+                      className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground"
+                    />
+                    <input
+                      type="text"
+                      value={referralCode}
+                      onChange={(e) => setReferralCode(e.target.value)}
+                      placeholder="Enter referral code"
+                      className="w-full pl-12 pr-4 py-4 bg-card border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder:text-muted-foreground"
+                    />
+                  </div>
+                  {referralCode && (
+                    <p className="text-xs text-green-600">Referral code detected! You'll earn bonuses.</p>
+                  )}
+                </div>
               </>
             ) : (
               <>
