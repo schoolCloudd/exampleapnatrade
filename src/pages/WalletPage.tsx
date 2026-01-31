@@ -20,9 +20,11 @@ interface WalletPageProps {
   totalBet: number;
   userName: string;
   onNavigate: (tab: "trade" | "wallet" | "referral" | "profile") => void;
+  onDeposit?: (amount: number) => Promise<void>;
+  onWithdraw?: (amount: number) => Promise<void>;
 }
 
-const WalletPage = ({ balance, totalDeposit, totalBet, userName, onNavigate }: WalletPageProps) => {
+const WalletPage = ({ balance, totalDeposit, totalBet, userName, onNavigate, onDeposit, onWithdraw }: WalletPageProps) => {
   const [activeView, setActiveView] = useState<"main" | "history">("main");
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const { user } = useAuth();
@@ -111,6 +113,42 @@ const WalletPage = ({ balance, totalDeposit, totalBet, userName, onNavigate }: W
             <div className="font-mono font-bold text-lg text-foreground">₹{totalBet.toLocaleString()}</div>
           </div>
         </div>
+      </div>
+
+      {/* Action Buttons */}
+      <div className="grid grid-cols-2 gap-4">
+        <button
+          onClick={() => {
+            // For demo purposes, deposit ₹1000
+            if (onDeposit) {
+              onDeposit(1000);
+            }
+          }}
+          className="glass-card rounded-xl p-4 flex flex-col items-center gap-2 hover:bg-profit/5 transition-all active:scale-95"
+        >
+          <div className="p-3 bg-profit/20 rounded-full">
+            <ArrowDownRight size={24} className="text-profit" />
+          </div>
+          <span className="font-semibold text-foreground">Deposit</span>
+          <span className="text-xs text-muted-foreground">Add money</span>
+        </button>
+
+        <button
+          onClick={() => {
+            // For demo purposes, withdraw ₹500 (if balance allows)
+            if (onWithdraw && balance >= 500) {
+              onWithdraw(500);
+            }
+          }}
+          disabled={balance < 500}
+          className="glass-card rounded-xl p-4 flex flex-col items-center gap-2 hover:bg-primary/5 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <div className="p-3 bg-primary/20 rounded-full">
+            <ArrowUpRight size={24} className="text-primary" />
+          </div>
+          <span className="font-semibold text-foreground">Withdraw</span>
+          <span className="text-xs text-muted-foreground">Get cash</span>
+        </button>
       </div>
 
       {/* Recent Transactions */}

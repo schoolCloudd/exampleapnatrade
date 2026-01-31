@@ -219,37 +219,70 @@ const Index = () => {
   }, [profile?.id]);
 
   const handleDeposit = async (amount: number) => {
-    if (!profile) return;
+    if (!profile || !user) return;
 
     const isFirstDeposit = profile.total_deposit === 0;
     const newBalance = profile.balance + amount;
     const newDeposit = profile.total_deposit + amount;
-    await updateBalance(newBalance, undefined, newDeposit);
 
-    // Create deposit notification
-    await createNotification({
-      title: "Deposit Received 💰",
-      message: `₹${amount.toLocaleString()} has been added to your account. Start trading now!`,
-      type: "deposit",
-    });
+    // Create transaction record
+    const { data: transaction } = await supabase
+      .from("transactions")
+      .insert({
+        user_id: user.id,
+        type: "deposit",
+        amount: amount,
+        status: "completed",
+        coin: "INR"
+      })
+      .select()
+      .single();
 
-    // Handle referral bonus for referred users
-    if (profile.referred_by) {
-      await processReferralBonus(profile.referred_by, profile.name, amount, isFirstDeposit);
+    if (transaction) {
+      await updateBalance(newBalance, undefined, newDeposit);
+
+      // Create deposit notification
+      await createNotification({
+        title: "Deposit Received 💰",
+        message: `₹${amount.toLocaleString()} has been added to your account. Start trading now!`,
+        type: "deposit",
+      });
+
+      // Handle referral bonus for referred users
+      if (profile.referred_by) {
+        await processReferralBonus(profile.referred_by, profile.name, amount, isFirstDeposit);
+      }
     }
   };
 
   const handleWithdraw = async (amount: number) => {
-    if (!profile || profile.balance < amount) return;
-    const newBalance = profile.balance - amount;
-    await updateBalance(newBalance);
+    if (!profile || !user || profile.balance < amount) return;
 
-    // Create withdraw notification
-    await createNotification({
-      title: "Withdrawal Initiated 💸",
-      message: `₹${amount.toLocaleString()} withdrawal request has been submitted.`,
-      type: "withdraw",
-    });
+    const newBalance = profile.balance - amount;
+
+    // Create transaction record
+    const { data: transaction } = await supabase
+      .from("transactions")
+      .insert({
+        user_id: user.id,
+        type: "withdraw",
+        amount: amount,
+        status: "pending", // Withdrawals start as pending
+        coin: "INR"
+      })
+      .select()
+      .single();
+
+    if (transaction) {
+      await updateBalance(newBalance);
+
+      // Create withdraw notification
+      await createNotification({
+        title: "Withdrawal Initiated 💸",
+        message: `₹${amount.toLocaleString()} withdrawal request has been submitted.`,
+        type: "withdraw",
+      });
+    }
   };
 
   const handleBet = async (amount: number) => {
@@ -510,15 +543,17 @@ const Index = () => {
             refreshProfile={refreshProfile}
           />
         )}
-        {activeTab === "wallet" && (
-          <WalletPage
-            balance={profile.balance}
-            totalDeposit={profile.total_deposit}
-            totalBet={profile.total_bet}
-            userName={profile.name}
-            onNavigate={setActiveTab}
-          />
-        )}
+      {activeTab === "wallet" && (
+        <WalletPage
+          balance={profile.balance}
+          totalDeposit={profile.total_deposit}
+          totalBet={profile.total_bet}
+          userName={profile.name}
+          onNavigate={setActiveTab}
+          onDeposit={handleDeposit}
+          onWithdraw={handleWithdraw}
+        />
+      )}
         {activeTab === "referral" && (
           <ReferralPage
             balance={profile.balance}
