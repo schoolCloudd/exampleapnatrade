@@ -1,0 +1,22 @@
+project_id = "avixixwhgifjjnligkuw"
+
+[functions.nowpayments-webhook]
+verify_jwt = false
+
+[functions.nowpayments-payout]
+verify_jwt = false
+
+[functions.nowpayments-payout-webhook]
+verify_jwt = false
+
+[functions.rate-limiter]
+verify_jwt = false
+
+[functions.settle-trade]
+verify_jwt = false
+
+[functions.admin-action]
+verify_jwt = false
+
+[functions.telegram-auth]
+verify_jwt = false
