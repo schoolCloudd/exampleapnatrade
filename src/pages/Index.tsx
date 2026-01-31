@@ -361,9 +361,22 @@ const Index = () => {
 
           {/* Error Display */}
           {telegramAuthError && (
-            <div className="text-center space-y-2">
-              <p className="text-destructive text-sm">{telegramAuthError}</p>
-              <p className="text-muted-foreground text-xs">Normal browser mode: Use email login below</p>
+            <div className="text-center space-y-2 max-w-sm">
+              <p className="text-destructive text-sm font-medium">Authentication Error</p>
+              <p className="text-destructive text-xs bg-destructive/10 p-2 rounded border">
+                {telegramAuthError}
+              </p>
+              {!isTelegram && (
+                <p className="text-muted-foreground text-xs">
+                  Normal browser mode: Use email login below
+                </p>
+              )}
+              <div className="text-xs text-muted-foreground mt-2 space-y-1">
+                <p>Debug Info:</p>
+                <p>• Telegram: {isTelegram ? 'Yes' : 'No'}</p>
+                <p>• Host: {window.location.hostname}</p>
+                <p>• Path: {window.location.pathname}</p>
+              </div>
             </div>
           )}
         </div>

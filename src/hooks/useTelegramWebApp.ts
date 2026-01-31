@@ -116,45 +116,80 @@ export const useTelegramWebApp = () => {
   const [startParam, setStartParam] = useState<string | null>(null);
 
   useEffect(() => {
-    const tg = window.Telegram?.WebApp;
-    
-    if (tg) {
-      setIsTelegram(true);
-      setColorScheme(tg.colorScheme);
-      
-      // Get user data
-      if (tg.initDataUnsafe?.user) {
-        setUser(tg.initDataUnsafe.user);
-      }
-      
-      // Get start parameter (for deep links)
-      if (tg.initDataUnsafe?.start_param) {
-        setStartParam(tg.initDataUnsafe.start_param);
-      }
-      
-      // Expand to full height
-      tg.expand();
-      
-      // Set theme colors
-      tg.setHeaderColor("#0a0a0a");
-      tg.setBackgroundColor("#0a0a0a");
-      
-      // Enable closing confirmation for important actions
-      tg.enableClosingConfirmation();
-      
-      // Signal that app is ready
-      tg.ready();
-      setIsReady(true);
-      
-      console.log("[TelegramWebApp] Initialized", {
-        version: tg.version,
-        platform: tg.platform,
-        user: tg.initDataUnsafe?.user,
+    const checkTelegram = () => {
+      const tg = window.Telegram?.WebApp;
+
+      console.log("[TelegramWebApp] Checking Telegram availability:", {
+        hasTelegram: !!window.Telegram,
+        hasWebApp: !!tg,
+        initData: tg?.initData?.substring(0, 50) + '...' || 'none',
+        initDataLength: tg?.initData?.length || 0,
+        platform: tg?.platform || 'unknown',
+        version: tg?.version || 'unknown'
       });
-    } else {
-      // Not running in Telegram
-      setIsReady(true);
-    }
+
+      if (tg) {
+        setIsTelegram(true);
+        setColorScheme(tg.colorScheme);
+
+        // Get user data
+        if (tg.initDataUnsafe?.user) {
+          setUser(tg.initDataUnsafe.user);
+          console.log("[TelegramWebApp] User data found:", tg.initDataUnsafe.user);
+        } else {
+          console.warn("[TelegramWebApp] No user data in initDataUnsafe");
+        }
+
+        // Get start parameter (for deep links)
+        if (tg.initDataUnsafe?.start_param) {
+          setStartParam(tg.initDataUnsafe.start_param);
+        }
+
+        // Expand to full height
+        tg.expand();
+
+        // Set theme colors
+        tg.setHeaderColor("#0a0a0a");
+        tg.setBackgroundColor("#0a0a0a");
+
+        // Enable closing confirmation for important actions
+        tg.enableClosingConfirmation();
+
+        // Signal that app is ready
+        tg.ready();
+        setIsReady(true);
+
+        console.log("[TelegramWebApp] Initialized successfully", {
+          version: tg.version,
+          platform: tg.platform,
+          hasUser: !!tg.initDataUnsafe?.user,
+          hasInitData: !!tg.initData,
+        });
+      } else {
+        // Not running in Telegram - check again in case it loads later
+        console.log("[TelegramWebApp] Telegram WebApp not found, will retry...");
+
+        // Retry after a short delay in case Telegram loads asynchronously
+        setTimeout(() => {
+          const retryTg = window.Telegram?.WebApp;
+          if (retryTg) {
+            console.log("[TelegramWebApp] Telegram WebApp found on retry!");
+            checkTelegram();
+          } else {
+            console.log("[TelegramWebApp] Not running in Telegram, setting ready");
+            setIsReady(true);
+          }
+        }, 1000);
+      }
+    };
+
+    // Check immediately
+    checkTelegram();
+
+    // Also check after a delay in case Telegram loads slowly
+    const timeout = setTimeout(checkTelegram, 2000);
+
+    return () => clearTimeout(timeout);
   }, []);
 
   // Haptic feedback helpers

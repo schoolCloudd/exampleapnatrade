@@ -133,13 +133,19 @@ export const useTelegramAuth = () => {
   useEffect(() => {
     const isLocalhost = window.location.hostname === 'localhost';
     const hasInitData = !!getInitData();
+    const initData = getInitData();
+
     console.log("[TelegramAuth] Effect triggered:", {
       isTelegram,
       isReady,
       hasInitData,
+      initDataLength: initData?.length || 0,
       isLocalhost,
+      hostname: window.location.hostname,
       isAuthenticated: state.isAuthenticated,
-      isAuthenticating: state.isAuthenticating
+      isAuthenticating: state.isAuthenticating,
+      tgWebApp: !!window.Telegram?.WebApp,
+      tgVersion: window.Telegram?.WebApp?.version || 'none'
     });
 
     // If already authenticated or authenticating, do nothing
@@ -156,7 +162,6 @@ export const useTelegramAuth = () => {
 
     // Check for Telegram initData - if present and valid, try Telegram auth
     if (isTelegram && hasInitData) {
-      // In Telegram with valid initData - try to authenticate
       console.log("[TelegramAuth] In Telegram with initData, checking session...");
       supabase.auth.getSession().then(({ data: { session } }) => {
         if (session) {
@@ -176,7 +181,22 @@ export const useTelegramAuth = () => {
           console.log("[TelegramAuth] No session in Telegram, authenticating...");
           authenticateWithTelegram();
         }
+      }).catch(sessionError => {
+        console.error("[TelegramAuth] Session check failed:", sessionError);
+        setState(prev => ({
+          ...prev,
+          isAuthenticating: false,
+          error: `Session check failed: ${sessionError.message}`,
+        }));
       });
+    } else if (isTelegram && !hasInitData) {
+      // In Telegram but no initData - this is likely the issue
+      console.error("[TelegramAuth] In Telegram but no initData found!");
+      setState(prev => ({
+        ...prev,
+        isAuthenticating: false,
+        error: "Telegram initData not found. Please ensure you're accessing this app through Telegram.",
+      }));
     } else {
       // Normal browser mode - check for existing session or allow email login
       console.log("[TelegramAuth] Normal browser mode, checking session...");
@@ -197,6 +217,13 @@ export const useTelegramAuth = () => {
             error: null,
           }));
         }
+      }).catch(sessionError => {
+        console.error("[TelegramAuth] Session check failed in browser mode:", sessionError);
+        setState(prev => ({
+          ...prev,
+          isAuthenticating: false,
+          error: `Session check failed: ${sessionError.message}`,
+        }));
       });
     }
   }, [isTelegram, isReady, tgUser, state.isAuthenticated, state.isAuthenticating, getInitData]);
