@@ -2121,3 +2121,73 @@ END $$;
 --         ALTER PUBLICATION supabase_realtime ADD TABLE profiles;
 --     END IF;
 -- END $$;
+
+-- =====================================================
+-- ADMIN SETUP AND MANAGEMENT SQL
+-- =====================================================
+
+-- Create admin user (replace with actual email and run manually)
+-- Note: First create user in Auth, then run these queries
+
+-- INSERT INTO public.user_roles (user_id, role)
+-- SELECT au.id, 'admin'
+-- FROM auth.users au
+-- WHERE au.email = 'admin@yourdomain.com'
+-- ON CONFLICT (user_id, role) DO NOTHING;
+
+-- Grant admin access to existing user
+-- UPDATE public.user_roles SET role = 'admin' WHERE user_id = 'user-uuid-here';
+
+-- View all admin users
+-- SELECT au.email, ur.role, ur.created_at
+-- FROM auth.users au
+-- JOIN public.user_roles ur ON au.id = ur.user_id
+-- WHERE ur.role = 'admin';
+
+-- View recent admin actions
+-- SELECT aal.action_type, aal.target_user_id, aal.before_state, aal.after_state, aal.reason, aal.created_at
+-- FROM public.admin_audit_log aal
+-- ORDER BY aal.created_at DESC
+-- LIMIT 50;
+
+-- Block a user (replace user_id)
+-- SELECT public.freeze_account('user-uuid-here', 'hard', 'Violation of terms', 'admin-uuid-here');
+
+-- View security events
+-- SELECT se.event_type, se.severity, se.user_id, se.event_data, se.created_at
+-- FROM public.security_events se
+-- WHERE se.handled = false
+-- ORDER BY se.severity DESC, se.created_at DESC;
+
+-- View financial audit for suspicious activity
+-- SELECT fal.user_id, fal.type, fal.amount, fal.before_balance, fal.after_balance, fal.created_at
+-- FROM public.financial_audit_log fal
+-- WHERE fal.amount > 10000 OR fal.type = 'admin_credit'
+-- ORDER BY fal.created_at DESC;
+
+-- View users with high risk scores
+-- SELECT usp.user_id, usp.risk_score, usp.risk_level, usp.risk_factors, p.name, p.balance
+-- FROM public.user_security_profile usp
+-- JOIN public.profiles p ON usp.user_id = p.user_id
+-- WHERE usp.risk_score > 50
+-- ORDER BY usp.risk_score DESC;
+
+-- Clean up expired rate limits and idempotency keys
+-- SELECT public.cleanup_expired_idempotency();
+-- DELETE FROM public.rate_limit_events WHERE window_start < now() - interval '24 hours';
+
+-- Platform settings management
+-- INSERT INTO public.platform_settings (key, value) VALUES ('new_setting', 'value');
+-- UPDATE public.platform_settings SET value = 'new_value' WHERE key = 'existing_setting';
+
+-- Emergency kill switches
+-- INSERT INTO public.platform_settings (key, value) VALUES ('kill_all', 'true');
+-- INSERT INTO public.platform_settings (key, value) VALUES ('kill_trades', 'true');
+-- INSERT INTO public.platform_settings (key, value) VALUES ('kill_withdrawals', 'true');
+
+-- View system health
+-- SELECT
+--   (SELECT COUNT(*) FROM public.profiles) as total_users,
+--   (SELECT COUNT(*) FROM public.trades WHERE created_at >= now() - interval '24 hours') as trades_24h,
+--   (SELECT COALESCE(SUM(amount), 0) FROM public.transactions WHERE type = 'withdraw' AND status = 'completed' AND created_at >= now() - interval '24 hours') as withdrawals_24h,
+--   (SELECT COUNT(*) FROM public.security_events WHERE created_at >= now() - interval '1 hour') as security_events_1h;

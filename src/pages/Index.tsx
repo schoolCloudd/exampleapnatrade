@@ -40,19 +40,6 @@ const Index = () => {
   const { isTelegram, hapticNotification } = useTelegram();
   const { isAuthenticating: isTelegramAuthenticating, error: telegramAuthError, isAuthenticated: isTelegramAuthenticated } = useTelegramAuth();
 
-  // Force fallback to email auth on localhost after a timeout
-  const [forceEmailAuth, setForceEmailAuth] = useState(false);
-  useEffect(() => {
-    if (window.location.hostname === 'localhost' && isTelegramAuthenticating) {
-      const timeout = setTimeout(() => {
-        console.log("[Index] Localhost: Forcing email auth fallback");
-        setForceEmailAuth(true);
-      }, 2000); // 2 second timeout on localhost
-
-      return () => clearTimeout(timeout);
-    }
-  }, [isTelegramAuthenticating]);
-
   const {
     notifications,
     unreadCount,
@@ -333,11 +320,10 @@ const Index = () => {
     }
   }, [user?.id, profile, handleBalanceChange, handleTradeComplete]);
 
-  // Special handling for localhost - skip loading entirely
-  const isLocalhost = window.location.hostname === 'localhost';
-  const shouldShowLoading = !isLocalhost && (
+  // Show loading only when actually loading auth or profile
+  const shouldShowLoading = (
     loading ||
-    (isTelegramAuthenticating && !telegramAuthError && !forceEmailAuth) ||
+    (isTelegramAuthenticating && !telegramAuthError) ||
     (user && !profile)
   );
 
@@ -377,9 +363,7 @@ const Index = () => {
           {telegramAuthError && (
             <div className="text-center space-y-2">
               <p className="text-destructive text-sm">{telegramAuthError}</p>
-              {isLocalhost && (
-                <p className="text-muted-foreground text-xs">Development mode: Use email login below</p>
-              )}
+              <p className="text-muted-foreground text-xs">Normal browser mode: Use email login below</p>
             </div>
           )}
         </div>
@@ -402,34 +386,7 @@ const Index = () => {
     );
   }
 
-  // On localhost, if user exists but profile is still loading, show a brief loading or assume profile exists
-  if (isLocalhost && user && !profile && !loading) {
-    // For localhost development, if user exists, assume they have a profile and show main app
-    // This prevents the name entry form from showing for existing users
-    return (
-      <div className="custom-cursor">
-        <CustomCursor />
-        <BackgroundMusic autoPlay />
-        {/* Show main app even if profile is still loading */}
-        {activeTab === "trade" && (
-          <Trade
-            balance={0} // Default balance while loading
-            userName={user.email?.split('@')[0] || 'User'} // Use email prefix as name
-            userId={user.id}
-            onBalanceChange={handleBalanceChange}
-            onBet={handleBet}
-            onNavigate={setActiveTab}
-            onOpenHistory={() => setCurrentView("history")}
-            onOpenNotifications={() => setCurrentView("notifications")}
-            unreadNotifications={unreadCount}
-            onTradeComplete={handleTradeComplete}
-            refreshProfile={refreshProfile}
-          />
-        )}
-        {/* Default to trade tab while profile loads */}
-      </div>
-    );
-  }
+
 
   // Needs profile (new user after signup)
   if (!profile) {
@@ -509,7 +466,6 @@ const Index = () => {
           totalDeposit={profile.total_deposit}
           totalBet={profile.total_bet}
           userName={profile.name}
-          onDeposit={handleDeposit}
           onNavigate={setActiveTab}
         />
       )}

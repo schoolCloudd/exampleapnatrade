@@ -18,7 +18,7 @@ interface TelegramAuthState {
 export const useTelegramAuth = () => {
   const { isTelegram, isReady, getInitData, user: tgUser } = useTelegramWebApp();
   const [state, setState] = useState<TelegramAuthState>({
-    isAuthenticating: window.location.hostname === 'localhost' ? false : true, // Start as not authenticating on localhost
+    isAuthenticating: false, // Don't start authenticating by default
     isAuthenticated: false,
     error: null,
     telegramUser: null,
@@ -132,7 +132,15 @@ export const useTelegramAuth = () => {
   // Handle authentication logic
   useEffect(() => {
     const isLocalhost = window.location.hostname === 'localhost';
-    console.log("[TelegramAuth] Effect triggered:", { isTelegram, isReady, isLocalhost, isAuthenticated: state.isAuthenticated, isAuthenticating: state.isAuthenticating });
+    const hasInitData = !!getInitData();
+    console.log("[TelegramAuth] Effect triggered:", {
+      isTelegram,
+      isReady,
+      hasInitData,
+      isLocalhost,
+      isAuthenticated: state.isAuthenticated,
+      isAuthenticating: state.isAuthenticating
+    });
 
     // If already authenticated or authenticating, do nothing
     if (state.isAuthenticated || state.isAuthenticating) {
@@ -146,9 +154,10 @@ export const useTelegramAuth = () => {
       return;
     }
 
-    if (isTelegram) {
-      // In Telegram - try to authenticate
-      console.log("[TelegramAuth] In Telegram, checking session...");
+    // Check for Telegram initData - if present and valid, try Telegram auth
+    if (isTelegram && hasInitData) {
+      // In Telegram with valid initData - try to authenticate
+      console.log("[TelegramAuth] In Telegram with initData, checking session...");
       supabase.auth.getSession().then(({ data: { session } }) => {
         if (session) {
           console.log("[TelegramAuth] Found existing session in Telegram");
@@ -168,19 +177,19 @@ export const useTelegramAuth = () => {
           authenticateWithTelegram();
         }
       });
-    } else if (isLocalhost) {
-      // Localhost - check for existing session or allow email login
-      console.log("[TelegramAuth] Localhost, checking session...");
+    } else {
+      // Normal browser mode - check for existing session or allow email login
+      console.log("[TelegramAuth] Normal browser mode, checking session...");
       supabase.auth.getSession().then(({ data: { session } }) => {
         if (session) {
-          console.log("[TelegramAuth] Found existing session on localhost");
+          console.log("[TelegramAuth] Found existing session");
           setState(prev => ({
             ...prev,
             isAuthenticated: true,
             telegramUser: null,
           }));
         } else {
-          console.log("[TelegramAuth] No session on localhost, enabling email auth");
+          console.log("[TelegramAuth] No session, enabling email auth");
           // No session - stop authenticating and allow email login
           setState(prev => ({
             ...prev,
@@ -189,18 +198,8 @@ export const useTelegramAuth = () => {
           }));
         }
       });
-    } else {
-      // Not in Telegram and not localhost - show error
-      console.log("[TelegramAuth] Not in supported environment");
-      setTimeout(() => {
-        setState(prev => ({
-          ...prev,
-          isAuthenticating: false,
-          error: "This app must be opened through Telegram",
-        }));
-      }, 2000);
     }
-  }, [isTelegram, isReady, tgUser, state.isAuthenticated, state.isAuthenticating]);
+  }, [isTelegram, isReady, tgUser, state.isAuthenticated, state.isAuthenticating, getInitData]);
 
   // Global timeout for authentication attempts
   useEffect(() => {
