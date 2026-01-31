@@ -24,37 +24,23 @@ const Auth = ({ onAuth, onSignUp, onSignIn, needsProfile }: AuthProps) => {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
+  // Debug logging
+  console.log("[Auth] Component rendered:", {
+    mode,
+    needsProfile,
+    loading,
+    hasName: !!name,
+    hasEmail: !!email,
+    hasPassword: !!password
+  });
+
   // Update mode based on needsProfile
   useEffect(() => {
     setMode(needsProfile ? "name" : "signup");
   }, [needsProfile]);
 
-  // Check for existing profile and redirect if found
-  useEffect(() => {
-    const checkExistingProfile = async () => {
-      if (mode === "name") {
-        try {
-          const { data: { user } } = await supabase.auth.getUser();
-          if (user) {
-            const { data: profile } = await supabase
-              .from("profiles")
-              .select("*")
-              .eq("user_id", user.id)
-              .maybeSingle();
-
-            if (profile) {
-              // Profile exists, redirect to dashboard
-              navigate("/");
-            }
-          }
-        } catch (error) {
-          console.error("Error checking existing profile:", error);
-        }
-      }
-    };
-
-    checkExistingProfile();
-  }, [mode, navigate]);
+  // Remove the redirect logic that was causing loops
+  // Profile creation is handled by the parent component
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

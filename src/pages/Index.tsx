@@ -321,10 +321,28 @@ const Index = () => {
   }, [user?.id, profile, handleBalanceChange, handleTradeComplete]);
 
   // Show loading only when actually loading auth or profile
+  // Add timeout to prevent infinite loading loops
+  const [loadingTimeout, setLoadingTimeout] = useState(false);
+
+  useEffect(() => {
+    if (loading || (isTelegramAuthenticating && !telegramAuthError) || (user && !profile)) {
+      const timeout = setTimeout(() => {
+        console.log("[Index] Loading timeout reached, forcing fallback");
+        setLoadingTimeout(true);
+      }, 15000); // 15 second timeout
+
+      return () => clearTimeout(timeout);
+    } else {
+      setLoadingTimeout(false);
+    }
+  }, [loading, isTelegramAuthenticating, telegramAuthError, user, profile]);
+
   const shouldShowLoading = (
-    loading ||
-    (isTelegramAuthenticating && !telegramAuthError) ||
-    (user && !profile)
+    !loadingTimeout && (
+      loading ||
+      (isTelegramAuthenticating && !telegramAuthError) ||
+      (user && !profile)
+    )
   );
 
   if (shouldShowLoading) {
