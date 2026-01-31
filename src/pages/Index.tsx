@@ -221,67 +221,121 @@ const Index = () => {
   const handleDeposit = async (amount: number) => {
     if (!profile || !user) return;
 
-    const isFirstDeposit = profile.total_deposit === 0;
-    const newBalance = profile.balance + amount;
-    const newDeposit = profile.total_deposit + amount;
+    // Validate deposit limits
+    if (amount < 100 || amount > 5000) {
+      alert("Deposit amount must be between ₹100 and ₹5000");
+      return;
+    }
 
-    // Create transaction record
-    const { data: transaction } = await supabase
-      .from("transactions")
-      .insert({
-        user_id: user.id,
-        type: "deposit",
-        amount: amount,
-        status: "completed",
-        coin: "INR"
-      })
-      .select()
-      .single();
+    try {
+      // Here you would integrate with NowPayments API
+      // For now, we'll simulate the deposit process
 
-    if (transaction) {
-      await updateBalance(newBalance, undefined, newDeposit);
+      const isFirstDeposit = profile.total_deposit === 0;
 
-      // Create deposit notification
-      await createNotification({
-        title: "Deposit Received 💰",
-        message: `₹${amount.toLocaleString()} has been added to your account. Start trading now!`,
-        type: "deposit",
-      });
+      // Create pending transaction record (will be updated by webhook)
+      const { data: transaction } = await supabase
+        .from("transactions")
+        .insert({
+          user_id: user.id,
+          type: "deposit",
+          amount: amount,
+          status: "pending", // Will be updated to "completed" by webhook
+          coin: "INR",
+          payment_method: "nowpayments"
+        })
+        .select()
+        .single();
 
-      // Handle referral bonus for referred users
-      if (profile.referred_by) {
-        await processReferralBonus(profile.referred_by, profile.name, amount, isFirstDeposit);
+      if (transaction) {
+        // In production, redirect to NowPayments payment URL
+        // For demo, we'll simulate successful payment
+
+        // Simulate payment completion (remove this in production)
+        setTimeout(async () => {
+          const newBalance = profile.balance + amount;
+          const newDeposit = profile.total_deposit + amount;
+
+          // Update transaction status
+          await supabase
+            .from("transactions")
+            .update({ status: "completed" })
+            .eq("id", transaction.id);
+
+          await updateBalance(newBalance, undefined, newDeposit);
+
+          // Create deposit notification
+          await createNotification({
+            title: "Deposit Received 💰",
+            message: `₹${amount.toLocaleString()} has been added to your account. Start trading now!`,
+            type: "deposit",
+          });
+
+          // Handle referral bonus for referred users
+          if (profile.referred_by) {
+            await processReferralBonus(profile.referred_by, profile.name, amount, isFirstDeposit);
+          }
+        }, 2000); // Simulate 2-second payment processing
+
+        // Show payment processing message
+        await createNotification({
+          title: "Payment Processing 💳",
+          message: `Processing ₹${amount.toLocaleString()} deposit. Please complete payment.`,
+          type: "deposit",
+        });
       }
+    } catch (error) {
+      console.error("Deposit error:", error);
+      alert("Failed to initiate deposit. Please try again.");
     }
   };
 
   const handleWithdraw = async (amount: number) => {
-    if (!profile || !user || profile.balance < amount) return;
+    if (!profile || !user) return;
 
-    const newBalance = profile.balance - amount;
+    // Validate withdrawal limits
+    if (amount < 200 || amount > 5000) {
+      alert("Withdrawal amount must be between ₹200 and ₹5000");
+      return;
+    }
 
-    // Create transaction record
-    const { data: transaction } = await supabase
-      .from("transactions")
-      .insert({
-        user_id: user.id,
-        type: "withdraw",
-        amount: amount,
-        status: "pending", // Withdrawals start as pending
-        coin: "INR"
-      })
-      .select()
-      .single();
+    if (profile.balance < amount) {
+      alert("Insufficient balance for withdrawal");
+      return;
+    }
 
-    if (transaction) {
-      await updateBalance(newBalance);
+    try {
+      // Note: In production, you would need to collect USDT TRC20 wallet address from user
+      // For now, we'll create the withdrawal request
 
-      // Create withdraw notification
-      await createNotification({
-        title: "Withdrawal Initiated 💸",
-        message: `₹${amount.toLocaleString()} withdrawal request has been submitted.`,
-        type: "withdraw",
-      });
+      // Create transaction record for USDT TRC20 withdrawal
+      const { data: transaction } = await supabase
+        .from("transactions")
+        .insert({
+          user_id: user.id,
+          type: "withdraw",
+          amount: amount,
+          status: "pending", // Manual processing required
+          coin: "USDT",
+          network: "TRC20"
+        })
+        .select()
+        .single();
+
+      if (transaction) {
+        const newBalance = profile.balance - amount;
+        await updateBalance(newBalance);
+
+        // Create withdraw notification
+        await createNotification({
+          title: "Withdrawal Requested 💸",
+          message: `₹${amount.toLocaleString()} USDT TRC20 withdrawal request submitted. Processing may take 5-30 minutes.`,
+          type: "withdraw",
+        });
+      }
+    } catch (error) {
+      console.error("Withdraw error:", error);
+      alert("Failed to process withdrawal. Please try again.");
     }
   };
 

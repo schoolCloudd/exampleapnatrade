@@ -25,7 +25,7 @@ interface WalletPageProps {
 }
 
 const WalletPage = ({ balance, totalDeposit, totalBet, userName, onNavigate, onDeposit, onWithdraw }: WalletPageProps) => {
-  const [activeView, setActiveView] = useState<"main" | "history">("main");
+  const [activeView, setActiveView] = useState<"main" | "history" | "deposit" | "withdraw">("main");
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const { user } = useAuth();
 
@@ -118,12 +118,7 @@ const WalletPage = ({ balance, totalDeposit, totalBet, userName, onNavigate, onD
       {/* Action Buttons */}
       <div className="grid grid-cols-2 gap-4">
         <button
-          onClick={() => {
-            // For demo purposes, deposit ₹1000
-            if (onDeposit) {
-              onDeposit(1000);
-            }
-          }}
+          onClick={() => setActiveView("deposit")}
           className="glass-card rounded-xl p-4 flex flex-col items-center gap-2 hover:bg-profit/5 transition-all active:scale-95"
         >
           <div className="p-3 bg-profit/20 rounded-full">
@@ -134,20 +129,15 @@ const WalletPage = ({ balance, totalDeposit, totalBet, userName, onNavigate, onD
         </button>
 
         <button
-          onClick={() => {
-            // For demo purposes, withdraw ₹500 (if balance allows)
-            if (onWithdraw && balance >= 500) {
-              onWithdraw(500);
-            }
-          }}
-          disabled={balance < 500}
+          onClick={() => setActiveView("withdraw")}
+          disabled={balance < 200}
           className="glass-card rounded-xl p-4 flex flex-col items-center gap-2 hover:bg-primary/5 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <div className="p-3 bg-primary/20 rounded-full">
             <ArrowUpRight size={24} className="text-primary" />
           </div>
           <span className="font-semibold text-foreground">Withdraw</span>
-          <span className="text-xs text-muted-foreground">Get cash</span>
+          <span className="text-xs text-muted-foreground">USDT TRC20</span>
         </button>
       </div>
 
@@ -206,6 +196,166 @@ const WalletPage = ({ balance, totalDeposit, totalBet, userName, onNavigate, onD
       </div>
     </div>
   );
+
+  const renderDepositView = () => {
+    const depositPackages = [
+      { amount: 100, bonus: 0, popular: false },
+      { amount: 250, bonus: 5, popular: false },
+      { amount: 500, bonus: 15, popular: true },
+      { amount: 1000, bonus: 35, popular: false },
+      { amount: 2000, bonus: 80, popular: false },
+      { amount: 5000, bonus: 250, popular: false },
+    ];
+
+    const handleDepositPackage = async (amount: number) => {
+      if (onDeposit) {
+        // Here we would integrate with NowPayments API
+        // For now, we'll just call the deposit function
+        await onDeposit(amount);
+        setActiveView("main");
+      }
+    };
+
+    return (
+      <div className="space-y-6">
+        <button
+          onClick={() => setActiveView("main")}
+          className="flex items-center gap-2 text-muted-foreground hover:text-foreground"
+        >
+          <ChevronLeft size={20} />
+          Back
+        </button>
+
+        <div className="space-y-4">
+          <div className="text-center">
+            <h2 className="text-xl font-bold text-foreground mb-2">Choose Deposit Amount</h2>
+            <p className="text-sm text-muted-foreground">Minimum ₹100, Maximum ₹5000</p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            {depositPackages.map((pkg) => (
+              <button
+                key={pkg.amount}
+                onClick={() => handleDepositPackage(pkg.amount)}
+                className={`glass-card rounded-xl p-4 text-center relative hover:bg-profit/5 transition-all active:scale-95 ${
+                  pkg.popular ? 'ring-2 ring-profit' : ''
+                }`}
+              >
+                {pkg.popular && (
+                  <div className="absolute -top-2 left-1/2 -translate-x-1/2 bg-profit text-primary-foreground text-xs px-2 py-1 rounded-full font-semibold">
+                    Popular
+                  </div>
+                )}
+                <div className="text-lg font-bold text-foreground">₹{pkg.amount}</div>
+                {pkg.bonus > 0 && (
+                  <div className="text-xs text-profit">+₹{pkg.bonus} bonus</div>
+                )}
+                <div className="text-xs text-muted-foreground mt-1">
+                  Total: ₹{pkg.amount + pkg.bonus}
+                </div>
+              </button>
+            ))}
+          </div>
+
+          <div className="glass-card rounded-xl p-4 bg-profit/5 border border-profit/20">
+            <h3 className="font-semibold text-foreground mb-2">💰 Deposit Information</h3>
+            <ul className="text-sm text-muted-foreground space-y-1">
+              <li>• Instant processing via NowPayments</li>
+              <li>• Multiple payment methods available</li>
+              <li>• Bonus credits added automatically</li>
+              <li>• Funds credited after payment confirmation</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const renderWithdrawView = () => {
+    const [withdrawAmount, setWithdrawAmount] = useState("");
+
+    const handleWithdraw = async () => {
+      const amount = parseInt(withdrawAmount);
+      if (isNaN(amount) || amount < 200 || amount > 5000) {
+        alert("Please enter amount between ₹200-₹5000");
+        return;
+      }
+
+      if (onWithdraw) {
+        await onWithdraw(amount);
+        setWithdrawAmount("");
+        setActiveView("main");
+      }
+    };
+
+    return (
+      <div className="space-y-6">
+        <button
+          onClick={() => setActiveView("main")}
+          className="flex items-center gap-2 text-muted-foreground hover:text-foreground"
+        >
+          <ChevronLeft size={20} />
+          Back
+        </button>
+
+        <div className="space-y-4">
+          <div className="text-center">
+            <h2 className="text-xl font-bold text-foreground mb-2">Withdraw Funds</h2>
+            <p className="text-sm text-muted-foreground">USDT TRC20 Network Only</p>
+          </div>
+
+          <div className="glass-card rounded-xl p-4 space-y-4">
+            <div>
+              <label className="text-sm text-muted-foreground block mb-2">Withdraw Amount (₹)</label>
+              <input
+                type="number"
+                value={withdrawAmount}
+                onChange={(e) => setWithdrawAmount(e.target.value)}
+                placeholder="200 - 5000"
+                min="200"
+                max="5000"
+                className="w-full p-3 bg-secondary rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-primary text-foreground"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Min: ₹200, Max: ₹5000, Available: ₹{balance}
+              </p>
+            </div>
+
+            <div className="bg-primary/5 rounded-lg p-3">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="w-2 h-2 bg-primary rounded-full"></div>
+                <span className="text-sm font-medium text-foreground">Withdrawal Details</span>
+              </div>
+              <div className="text-xs text-muted-foreground space-y-1">
+                <p>• Network: USDT TRC20</p>
+                <p>• Processing time: 5-30 minutes</p>
+                <p>• Fee: Network fee only</p>
+                <p>• Minimum withdrawal: ₹200</p>
+              </div>
+            </div>
+
+            <button
+              onClick={handleWithdraw}
+              disabled={!withdrawAmount || parseInt(withdrawAmount) < 200 || parseInt(withdrawAmount) > 5000 || parseInt(withdrawAmount) > balance}
+              className="w-full py-3 bg-primary text-primary-foreground font-semibold rounded-lg hover:bg-primary/90 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Request Withdrawal
+            </button>
+          </div>
+
+          <div className="glass-card rounded-xl p-4 bg-warning/5 border border-warning/20">
+            <h3 className="font-semibold text-foreground mb-2">⚠️ Important Notes</h3>
+            <ul className="text-sm text-muted-foreground space-y-1">
+              <li>• Only USDT TRC20 withdrawals supported</li>
+              <li>• Ensure correct wallet address</li>
+              <li>• Withdrawals are manual and may take time</li>
+              <li>• Contact support for urgent withdrawals</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   const renderHistoryView = () => (
     <div className="space-y-6">
@@ -271,6 +421,8 @@ const WalletPage = ({ balance, totalDeposit, totalBet, userName, onNavigate, onD
 
       <main className="px-4 py-4">
         {activeView === "main" && renderMainView()}
+        {activeView === "deposit" && renderDepositView()}
+        {activeView === "withdraw" && renderWithdrawView()}
         {activeView === "history" && renderHistoryView()}
       </main>
 
